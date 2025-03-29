@@ -1,0 +1,531 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>easyRAG - 方便管理知识库</title>
+	<script src="/static/js/vue.global.js"></script>
+	<script>
+		var searchUrl="/api/search";
+		var uploadUrl="/api/upload";
+		var filesUrl="/api/files";
+		var agentUrl="/api/agent";
+		var scenceUrl="/api/scence";
+        var spiderUrl="/api/spider";
+	</script>
+	<!-- <script src="./static/js/swiper-bundle.min.js"></script> -->
+	<link href="/static/css/style.css?v=2025021209" rel="stylesheet" type="text/css">
+	<style>
+	</style>
+</head>
+{% raw %}
+<div id="app" style="overflow-x: hidden;">
+
+		<div v-show="isToastVisible" class="toast-container"> 
+		  <div class="toast-text">
+			{{ toastMessage }}
+		  </div>
+		</div>
+
+
+
+   <div class="header">
+	<div class="logo_box">
+		easyRAG
+	</div>
+    <div class="search_box">
+        <form @submit.prevent="handleSubmit">
+            <input type="text" id="keyword" :placeholder="placeholder" v-model="formData.keyword" required>
+			<div class="agent_list">
+				<div class="agents title">
+					智能体：
+				</div>
+				<div class="agents add" @click="addAgent()">
+					添加+
+				</div>
+				<div
+					class="agents"
+					v-for="(item, index) in agent_list"
+					:key="item.id"
+					:class="{ selected: selectedAgentId === item.id }"
+					@click="selectAgent(item)"
+				>
+					{{item.agent_name}}
+				</div>
+			</div>
+			<div class="scence_list">
+				<div class="scences title">
+					场景：
+				</div>
+				<div class="scences add" @click="addScene()">
+					添加+
+				</div>
+				<div
+					class="scences"
+					v-for="(item, index) in scene_list"
+					:key="item.id"
+					:class="{ selected: selectedSceneId === item.id }"
+					@click="selectScene(item)"
+				>
+					{{item.scene_name}}
+				</div>
+			</div>
+		</form>
+		
+	</div>
+
+   </div>
+
+   <div class="hit_list">
+    <div class="hit_list_left">
+		<div class="item" v-for="(item, index) in searchRes">
+			<div class="item_similarity">匹配度：{{ item.similarity }}</div>
+			<div class="item_content" v-html="item.content"></div>
+		</div>
+    </div>
+	<div class="hit_list_right">
+		<div class="title">知识库  
+
+			<input class="fileinput" type="file" ref="fileInput" @change="handleFileChange" />
+			<template v-if="selectedAgentId && selectedSceneId">
+				<button @click="uploadFile" class="uploadBtn selected">{{uploadText}}</button>
+			</template>
+			<template v-else>
+				<button class="uploadBtn">{{uploadText}}</button>
+			</template>
+
+		</div>
+		<div class="file_list">
+			<div class="files"  
+			v-for="(item, index) in file_list" 
+			:title="item.file_name" 
+			:alt="item.file_name"
+			:key="item.id"
+			:class="{ selected: selectedFileId === item.id }"
+			@click="selectFile(item)"
+			>{{item.file_name}} <span v-if="embedding_status=0">...</span></div> 
+		</div>
+
+
+
+
+	</div>
+
+   </div>
+
+
+</div>
+{% endraw %}
+<script>
+  const { createApp,reactive, ref , onMounted, watch} = Vue 
+
+  createApp({
+    setup() {
+
+		onMounted(() => {
+                    fileInput.value = document.querySelector('input[type="file"]');
+        });
+
+
+		const fileInput = ref(null); // 文件选择框的引用
+        const file = ref(null); // 选中的文件
+
+		const agent_list = ref([]);
+		const scene_list = ref([]);
+		const file_list = ref([]);
+		const selectedAgentId = ref(0);
+		const selectedSceneId = ref(0);
+        const selectedFileId = ref(0);
+
+		const toastText = ref("");
+		const placeholder = ref("输入文字搜索"); 
+		const spiderAble = ref(false); 
+		const isToastVisible = ref(false); 
+		const toastMessage = ref(""); 
+		const wxStatus=ref('connecting')
+		let reconnectInterval = 5000; // 重连间隔时间，这里是5000毫秒(5秒)
+		let reconnectTries = 0;
+		const maxReconnectTries = 3; // 最多重连尝试次数
+		const uploadText = ref("上传文件");
+		const socketUrl=ref('ws://127.0.0.1:8903/ws');
+
+	  const formData = ref({
+		keyword: '',
+      });
+	  const isLoading=ref(false)
+
+      const showToast = (text) => {
+		toastMessage.value=text;
+		isToastVisible.value = true;
+		setTimeout(() => {
+			isToastVisible.value = false;
+			toastMessage.value="";
+		}, 2500); // 5 秒后隐藏
+      }
+
+	  const addAgent = async () => {
+		name=prompt("请输入智能体名称?");
+		if((name != null) && (name != "") && (name != "null")){
+			try {
+				const response = await fetch(agentUrl, {
+					method: 'POST',
+					body: JSON.stringify({'agent_name':name}),       
+					headers: {
+						'Content-Type': 'application/json'
+					}
+				});
+
+				if (response.ok) {
+					const result = await response.json();
+					// console.log(result);
+					showToast(result.info);
+					if(result.status==1){
+                        inits();
+					}
+					isLoading.value = false;
+				} else {
+					console.error('Error submitting data:', response.status);
+				}
+			} catch (error) {
+				console.error('Error:', error);
+			}	
+		}
+      }
+	  const addScene = async () => {
+		name=prompt("请输入场景名称?");
+		if((name != null) && (name != "") && (name != "null")){
+			try {
+				const response = await fetch(scenceUrl, {
+					method: 'POST',
+					body: JSON.stringify({'scence_name':name}),       
+					headers: {
+						'Content-Type': 'application/json'
+					}
+				});
+
+				if (response.ok) {
+					const result = await response.json();
+					// console.log(result);
+					showToast(result.info);
+					if(result.status==1){
+						inits();
+					}
+					isLoading.value = false;
+				} else {
+					console.error('Error submitting data:', response.status);
+				}
+			} catch (error) {
+				console.error('Error:', error);
+			}
+		}
+	  }
+
+
+	  const startwx = () => {
+      ws = new WebSocket(socketUrl.value);
+        ws.onopen = () => {
+            console.log('WebSocket 连接成功');
+            // 可以在这里调用通知或图标闪烁的逻辑
+            var message = { action: 'login', user_id: 'easyRAG'};
+            ws.send(JSON.stringify(message));
+            wxStatus.value='online';
+        };
+
+        ws.onmessage = (event) => {
+            console.log('收到消息:', event.data);
+			const result = JSON.parse(event.data);
+			let msg=result.info
+			if ("action" in result) {
+				if (result["action"]=="splitter_end") {
+					msg+=" 分割耗时："+String(result["data"]["splitter_time"])+"，总耗时："+String(result["data"]["take_time"]) 
+				}
+			}
+			showToast(msg); 
+
+
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket 错误:', error);
+            // 处理错误，可以选择重连
+            console.log('尝试重新连接...');
+            ws.close(); // 关闭当前连接以尝试重连
+        };
+
+        ws.onclose = (event) => {
+          console.log('WebSocket 连接关闭，准备重连...');
+          wxStatus.value='connecting';
+          // 可以选择在这里停止通知或图标闪烁
+          // 延迟一段时间后重连
+          setTimeout(() => {
+            attemptReconnect();
+          }, reconnectInterval);
+        };
+    }
+
+
+    const attemptReconnect = () => {
+        if (reconnectTries < maxReconnectTries) {
+            reconnectTries++;
+            console.log(`尝试第${reconnectTries}次重连...`);
+            startwx();              
+        } else {
+            console.log('重连尝试已达上限，停止重连');
+            wxStatus.value='offline';
+        }
+    };	
+
+
+        // 封装关键词高亮函数
+		const highlightKeywords = (text, keywords) => {
+            // 转义正则表达式的特殊字符
+            function escapeRegExp(string) {
+                return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+
+            // 遍历关键词数组，逐个高亮
+            keywords.forEach(keyword => {
+                const escapedKeyword = escapeRegExp(keyword);
+                const regex = new RegExp(escapedKeyword, 'gi');
+                text = text.replace(regex, match => `<span class="highlight">${match}</span>`);
+            });
+
+            return text;
+        }
+
+	  const searchRes=ref([])
+
+	  const isHttpStart = (text) => {
+		return /^http/.test(text);
+	  }
+
+
+		const handleSubmit = async () => {
+			console.log('表单提交:',  formData.value.keyword); 
+			if(isHttpStart(formData.value.keyword)){
+                if(!selectedAgentId.value || !selectedSceneId.value){
+					return false;
+				}
+				try {
+					const response = await fetch(spiderUrl, {
+						method: 'POST',
+						body: JSON.stringify({'url':formData.value.keyword,"agent_id":selectedAgentId.value,"scene_id":selectedSceneId.value}),       
+						headers: {
+							'Content-Type': 'application/json'
+						}
+					});
+
+					if (response.ok) {
+						const result = await response.json();
+						// console.log(result);
+						showToast(result.info);
+						if(result.status==1){
+							inits();
+						}
+						isLoading.value = false;
+					} else {
+						console.error('Error submitting data:', response.status);
+					}
+				} catch (error) {
+					console.error('Error:', error);
+				}
+
+			}else{
+				try {
+					const response = await fetch(searchUrl, {
+						method: 'POST',
+						body: JSON.stringify({'q':formData.value.keyword,"agent_id":selectedAgentId.value,"scene_id":selectedSceneId.value,"file_id":selectedFileId.value}),       
+						headers: {
+							'Content-Type': 'application/json'
+						}
+					});
+
+					if (response.ok) {
+						const result = await response.json();
+						// console.log(result);
+						if(result.status==1){
+							const keywords = [formData.value.keyword]; // 关键词数组
+							for (i in result.data){
+								result.data[i]['content']=highlightKeywords(result.data[i]['content'], keywords);
+							}
+							searchRes.value=result.data
+						}
+						isLoading.value = false;
+					} else {
+						console.error('Error submitting data:', response.status);
+					}
+				} catch (error) {
+					console.error('Error:', error);
+				}
+			}
+
+
+
+
+			
+
+		};
+      const inits = async () => {
+
+		// isLoading.value = false;
+
+		try {
+			const response = await fetch(filesUrl, {
+				method: 'POST',
+				body: JSON.stringify({"agent_id":selectedAgentId.value,"scene_id":selectedSceneId.value}),  
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				// console.log(result);
+				if(result.status==1){
+					
+					agent_list.value=result.data.agent_list
+					scene_list.value=result.data.scene_list
+					file_list.value=result.data.file_list
+
+				}
+				isLoading.value = false;
+			} else {
+				console.error('Error submitting data:', response.status);
+			}
+		} catch (error) {
+			console.error('Error:', error);
+		}
+      };
+
+      const selectAgent =  async (item) => {
+		selectedAgentId.value=item.id;
+		spiderHandle();
+		inits();
+	  }
+	  const selectScene =  async (item) => {
+		selectedSceneId.value=item.id;
+		spiderHandle();
+		inits();
+      }
+	  const selectFile =  async (item) => {
+		selectedFileId.value=item.id;
+		spiderHandle();
+		inits();
+      }
+
+
+
+
+	  const spiderHandle =  async () => {
+		if(selectedAgentId.value && selectedSceneId.value){
+            placeholder.value="输入文字搜索 / 输入链接抓取";
+		}else{
+			placeholder.value="输入文字搜索";
+		}
+      }
+
+
+
+
+	//   inits();
+
+    const handleFileChange =  async (event) => {
+
+      const formData = new FormData();
+      formData.append('file', event.target.files[0]);
+
+      formData.append('agent_id', selectedAgentId.value);
+	  if(!selectedAgentId.value){
+          return false;
+	  }
+	  formData.append('scene_id', selectedSceneId.value);
+	  if(!selectedSceneId.value){
+		return false;
+      }
+
+      try {
+        const response = await fetch(uploadUrl, {
+          method: 'POST',
+          body: formData,
+        });
+
+		if (response.ok) {
+				const result = await response.json();
+				// console.log(result);
+				showToast(result.info);
+				if(result.status==1){
+		            inits();
+				}
+				isLoading.value = false;
+			} else {
+				console.error('Error submitting data:', response.status);
+			}
+
+      } catch (error) {
+        console.error('文件上传失败', error);
+		uploadText.value='文件上传失败';
+      }
+
+
+
+    }
+
+
+	const triggerFileInput = () => {
+
+	  if(!selectedAgentId.value){
+          return false;
+	  }
+	  if(!selectedSceneId.value){
+		return false;
+      }
+        fileInput.value.click();
+    };
+
+    const uploadFile =  async () => {
+
+		
+		if (!file.value) {
+			triggerFileInput();
+           return;
+        }
+
+    }
+
+	startwx();
+	inits();
+
+      return {
+		formData,
+		searchRes,
+		uploadText,
+		agent_list,
+		scene_list,
+		file_list,
+		selectedAgentId,
+	    selectedSceneId,
+		selectedFileId,
+		placeholder,
+		isToastVisible,
+        toastMessage,
+		handleSubmit,
+		handleFileChange,
+		uploadFile,
+		selectScene,
+		selectAgent,
+		selectFile,
+		addScene,
+		addAgent
+      }
+
+
+    }
+  }).mount('#app')
+</script>
+</html>
+
+
+
+
+

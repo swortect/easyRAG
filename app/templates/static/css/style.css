@@ -1,0 +1,69 @@
+html,body{ margin: 0; padding: 0;}
+.header{ height: 150px; width: 100%; position: fixed; left: 0; top: 0; background-color: #fff; min-width: 1000px;}
+.logo_box{ height: 90px; width: 200px; float: left; line-height: 90px; text-align: center; font-weight: bolder; font-size: 1.5rem;} 
+.search_box{ height: 150px; width: 650px; display: inline-block;} 
+.search_box input{ height: 30px; margin: 26px 0; margin-bottom: 10px; width: 600px; padding: 5px 15px; border: 2px solid #ccc; border-radius: 5px;} 
+
+
+.search_box .agent_list{}
+.search_box .agent_list .agents{ cursor:pointer; background-color: #f5f6f9; min-width: 60px; color: #2440b3;font-size: 0.8rem; display:inline-block; text-align: center; margin-right: 10px; margin-bottom: 10px; padding: 3px 0; border-radius: 3px;}
+
+.search_box .agent_list .agents.title{ background-color: #fff; text-align: left; font-weight: bolder;} 
+.search_box .agent_list .agents.selected{ background-color: #2440b3; color: #f5f6f9;}
+
+
+.search_box .scence_list{} 
+.search_box .scence_list .scences{ cursor:pointer; background-color: #f5f6f9; min-width: 80px; color: #2440b3;font-size: 0.8rem; display:inline-block; text-align: center; margin-right: 10px; margin-bottom: 10px; padding: 3px 0; border-radius: 3px;}
+.search_box .scence_list .scences.title{ background-color: #fff; text-align: left; font-weight: bolder;}
+
+.search_box .scence_list .scences.selected{ background-color: #2440b3; color: #f5f6f9;}
+
+.upload_box{ height: 90px; width: 150px; display: inline-block; line-height: 90px;}  
+.fileinput{ display:none;}
+.hit_list{ width: 90%; margin-left: 200px; margin-top: 150px; margin-bottom: 90px; display: flex;}
+
+.uploadBtn{display: inline; float: right; background-color: #f5f6f9; color: #2440b3; border: none;padding: 5px 8px; border-radius: 3px; min-width: 60px; cursor:pointer; text-align: center;}
+.uploadBtn.selected{background-color: #2440b3; color: #f5f6f9;}
+
+
+
+
+.hit_list_left{ width: 650px;}   
+.hit_list_right{position: fixed;right:25%;top:150px; width: 350px; min-height: 300px; margin-left: 50px; box-shadow: 0 0 1px 1px #f1f1f1; padding: 10px; border-radius: 3px;}
+.hit_list_right .file_list{ padding-top: 15px;}
+.hit_list_right .file_list .files{ margin-bottom: 10px; cursor: pointer; color: #2440b3; padding:2px 0; border-radius: 0px; font-size: 0.8rem; line-height: 1rem; width: 330px; /* 设置最小宽度 */
+  white-space: nowrap; /* 防止内容换行 */
+  overflow: hidden; /* 隐藏超出部分 */
+  text-overflow: ellipsis; /* 显示省略号 */} 
+  .hit_list_right .file_list .files.selected{ border-bottom: 1px solid #2440b3;}
+.hit_list .item{ width: 600px; padding: 10px 15px; border-bottom: 1px solid #f1f1f1;}
+
+.hit_list .item .item_similarity{ margin-bottom: 5px; color:#2440b3; font-size: 1.2rem;}
+
+.hit_list .item .item_content{ line-height: 1.6rem; font-size: 0.8rem; color:#333;}
+
+
+.hit_list .item .item_content .highlight {
+  color: #f73131;
+}
+
+.toast-container {
+  position: fixed;
+  bottom:0;
+  left: 0;
+  width: 100%;
+  height: 30%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; /* 确保 toast 在最上层 */
+}
+
+.toast-text {
+  background-color: rgba(0, 0, 0, 0.7); /* 透明度为 0.7 的黑色 */
+  color: white;
+  padding: 10px 20px;
+  border-radius: 10px; /* 圆角 */
+  font-size: 16px;
+  text-align: center;
+}

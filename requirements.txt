@@ -1,0 +1,17 @@
+beautifulsoup4==4.13.3
+fastapi==0.115.12
+modelscope==1.18.1
+python-dotenv==1.1.0
+readability_lxml==0.8.1
+Requests==2.32.3
+torch==2.5.1
+tortoise==0.1.1
+tortoise_vector==0.1.4
+aerich==0.7.2
+langchain==0.3.6
+langchain_community==0.3.5
+langchain-openai==0.2.5
+lxml_html_clean==0.4.1
+pypdf==5.1.0
+python-multipart==0.0.20
+uvicorn[standard]
