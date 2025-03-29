@@ -13,7 +13,14 @@ from readability import Document
 from bs4 import BeautifulSoup
 import requests
 import re
+from pydantic import BaseModel
 
+
+class SearchRequest(BaseModel):
+    q: str=""
+    agent_id: int=0
+    scene_id: int=0
+    file_id: int=0
 
 
 
@@ -235,18 +242,41 @@ async def spider(request: Request,background_tasks: BackgroundTasks):
 
 @router.post("/search")
 async def search(request: Request):
-    data = await request.json()
-    print(data)
-    if "q" not in data:
-        return jsonReturn(info="参数缺失")
-    agent_id=0
-    scene_id = 0
-    if "agent_id" in data:
-        agent_id = data["agent_id"]
-    if "scene_id" in data:
-        scene_id = data["scene_id"]
-    if "file_id" in data:
-        file_id = data["file_id"]
+    try:
+        data = await request.json()
+        print(2)
+        print(type(data))
+        print(data)
+        if isinstance(data, str):
+            data = json.loads(data)
+        print(data)
+        if "q" not in data:
+            return jsonReturn(info="参数缺失")
+        q=data["q"]
+        if "agent_id" in data:
+            agent_id=data["agent_id"]
+        if "scene_id" in data:
+            scene_id=data["scene_id"]
+        if "agent_id" in data:
+            file_id=data["file_id"]
+    except json.JSONDecodeError:
+        form_data = await request.form()  # 解析表单数据
+        print(2)
+        print(form_data)
+        q = form_data.get("q")
+        if q =="":
+            return jsonReturn(info="参数缺失")
+        agent_id = form_data.get("agent_id")
+        scene_id = form_data.get("scene_id")
+        file_id = form_data.get("file_id")
+
+    # return  {"info": "参数缺失","data":[{"content":"适合黑色地板"}]}
+    # # data = await request.json()
+    # # print(data)
+    # if request.q == "":
+    #     return jsonReturn(info="参数缺失")
+
+
 
     whereSql=""
     if agent_id or scene_id or file_id:
@@ -260,7 +290,7 @@ async def search(request: Request):
         whereSql=whereSql[0:-4]
 
 
-    keyword= data["q"]
+    keyword= q
     print(keyword)
     embedding = request.app.vectorEncoderInstance.vectorEncode(keyword)
     # print(embedding)
