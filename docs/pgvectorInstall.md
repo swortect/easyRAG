@@ -21,3 +21,5 @@ docker run --name pgvector --restart=always -e POSTGRES_USER=pgvector -e POSTGRE
 - 以上示例中的值是将容器的数据目录映射到了你的 Windows 宿主机的 D:\dockermount\pgvector\pgdata 目录。一般来说，你需要将冒号前面的
 值修改为 Windows 宿主机你想要保存数据库数据的目录。
 - -p：PostgreSQL 的端口。如果你的 Windows 宿主机没有安装 PostgreSQL，则不需要修改
+## 安装 pgadmin
+现在我们来安装 pgadmin。我们打开浏览器访问 https://www.pgadmin.org/download/。下载 Windows 版本，然后按默认设置安装。 
